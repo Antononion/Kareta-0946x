@@ -1,33 +1,40 @@
 package ru.gr0946x.net;
 
-import java.io.BufferedReader;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import ru.gr0946x.bd.config.DatabaseConfig;
+import ru.gr0946x.bd.service.AuthService;
+import ru.gr0946x.bd.service.ChatService;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 
 public class Server {
-
+    private final AuthService authService;
+    private final ChatService chatService;
     private boolean isActive;
-    public Server(int port){
-        isActive = true;
-        new Thread(()->{
+
+    public Server(int port) {
+        var context = new AnnotationConfigApplicationContext(DatabaseConfig.class);
+        this.authService = context.getBean(AuthService.class);
+        this.chatService = context.getBean(ChatService.class);
+
+        this.isActive = true;
+        new Thread(() -> {
             try (var serverSocket = new ServerSocket(port)) {
-                System.out.println("Сервер запущен");
+                System.out.println("Сервер запущен на порту " + port);
                 while (isActive) {
-                    try{
+                    try {
                         var socket = serverSocket.accept();
-                        System.out.println("Клиент подключен");
-                        var connClient = new ConnectedClient(socket);
+                        System.out.println("Клиент подключён");
+                        var connClient = new ConnectedClient(socket, authService, chatService);
                         connClient.start();
                     } catch (Exception e) {
-                        System.out.println("Ошибка подключения клиентов...");
-                        System.out.println(e.getMessage());
-                        isActive = false;
+                        System.err.println("Ошибка при подключении клиента: " + e.getMessage());
                     }
                 }
             } catch (IOException e) {
-                System.out.println("Ошибка включения сервера");
+                System.err.println("Ошибка запуска сервера: " + e.getMessage());
+                isActive = false;
             }
         }).start();
     }
