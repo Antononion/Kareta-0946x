@@ -20,6 +20,7 @@ public class ConnectedClient {
 
     public ConnectedClient(Socket socket, AuthService authService, ChatService chatService) throws IOException {
         this.communicator = new Communicator(socket);
+        this.communicator.setOnDisconnect(this::stop);
         this.authService = authService;
         this.chatService = chatService;
         this.communicator.addDataListener(this::parseData);
@@ -58,11 +59,11 @@ public class ConnectedClient {
             if ("REG".equals(command)) {
                 authenticatedUser = authService.register(nick, password);
                 sendInfo("Регистрация успешна. Добро пожаловать, " + authenticatedUser.getNick() + "!");
-                sendOnlineList();
+                notifyAllOnlineList();
             } else if ("LOGIN".equals(command)) {
                 authenticatedUser = authService.login(nick, password);
                 sendInfo("Вход выполнен. Добро пожаловать, " + authenticatedUser.getNick() + "!");
-                sendOnlineList();
+                notifyAllOnlineList();
             } else {
                 sendError("Неизвестная команда. Используйте REG или LOGIN");
             }
@@ -73,12 +74,18 @@ public class ConnectedClient {
 
     private void handleMessage(String data) {
         String[] parts = data.split(ProtocolConstants.COMMAND_SEPARATOR, 3);
+        String command = parts[0].trim().toUpperCase();
+
+        if ("LIST_USERS".equals(command)) {
+            notifyAllOnlineList();
+            return;
+        }
+
         if (parts.length < 2) {
             sendError("Формат: PM:Ник:Текст | BROADCAST:Текст | SEARCH:Ник:Запрос | HISTORY:Ник");
             return;
         }
 
-        String command = parts[0].trim().toUpperCase();
         try {
             switch (command) {
                 case "PM" -> handlePrivateMessage(parts);
@@ -141,13 +148,20 @@ public class ConnectedClient {
         sendData(MessageType.INFO + ":Результаты поиска в чате с " + targetNick + ":\n" + response);
     }
 
-    private void sendOnlineList() {
+    private void notifyAllOnlineList() {
         String online = onlineClients.stream()
                 .filter(c -> c.authenticatedUser != null)
                 .map(c -> c.authenticatedUser.getNick())
                 .reduce((a, b) -> a + ", " + b)
                 .orElse("Нет пользователей онлайн");
-        sendData(MessageType.INFO + ":Пользователи онлайн: " + online);
+
+        String payload = MessageType.INFO + ":Пользователи онлайн: " + online;
+
+        for (ConnectedClient client : onlineClients) {
+            if (client.authenticatedUser != null) {
+                client.sendData(payload);
+            }
+        }
     }
 
     private void sendError(String msg) {
@@ -165,5 +179,6 @@ public class ConnectedClient {
         if (authenticatedUser != null) {
             System.out.println(authenticatedUser.getNick() + " отключился");
         }
+        notifyAllOnlineList();
     }
 }

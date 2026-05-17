@@ -15,6 +15,7 @@ public class Communicator {
     private final BufferedReader in;
     private final PrintWriter out;
     private boolean isActive;
+    private Runnable onDisconnect;
 
     private final List<Consumer<String>> dataListeners = new ArrayList<>();
 
@@ -40,6 +41,10 @@ public class Communicator {
         );
     }
 
+    public void setOnDisconnect(Runnable onDisconnect) {
+        this.onDisconnect = onDisconnect;
+    }
+
     public void start(){
         isActive = true;
         new Thread(()-> {
@@ -52,11 +57,15 @@ public class Communicator {
                     }
                 }
             } catch (Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("Connection reset")) {
+                    return;
+                }
                 System.err.println("Ошибка чтения данных из сети");
                 System.err.println(e.getMessage());
             }
             finally {
                 stop();
+                if (onDisconnect != null) onDisconnect.run();
             }
         }).start();
     }
