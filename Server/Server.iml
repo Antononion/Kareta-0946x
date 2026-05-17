@@ -14,5 +14,6 @@
     <orderEntry type="library" name="slf4j.api" level="project" />
     <orderEntry type="library" name="jakarta.persistence.api" level="project" />
     <orderEntry type="library" name="springframework.data.spring.jpa" level="project" />
+    <orderEntry type="library" name="mindrot.jbcrypt" level="project" />
   </component>
 </module>

@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 @Service
 public class AuthService {
     private final UserRepository userRepository;
-    private static final Pattern NICK_PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9_]{2,19}$");
+    private static final Pattern NICK_PATTERN = Pattern.compile("^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё0-9_]{2,19}$");
 
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
