@@ -58,12 +58,9 @@ public class Communicator {
                             dataListener.accept(data);
                         }
                     } catch (java.net.SocketTimeoutException e) {
-                        // Таймаут — просто продолжаем цикл, проверяя isActive
-                        continue;
                     }
                 }
             } catch (IOException e) {
-                // Нормальное завершение при закрытии сокета
             } finally {
                 stop();
                 if (onDisconnect != null) onDisconnect.run();
@@ -81,15 +78,13 @@ public class Communicator {
         isActive = false;
 
         try {
-            // 🔥 Сначала закрываем сокет — это прервёт блокирующий readLine()
+
             if (socket != null && !socket.isClosed()) {
-                socket.close();  // Это вызовет IOException в потоке чтения
+                socket.close();
             }
-            // Потом закрываем потоки (они уже могут быть закрыты)
             if (in != null) in.close();
             if (out != null) out.close();
         } catch (IOException e) {
-            // Ожидаемая ошибка при закрытии — игнорируем
         }
     }
 }
