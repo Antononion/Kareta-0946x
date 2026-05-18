@@ -1,5 +1,6 @@
 package ru.gr0946x.net;
-
+import ru.gr0946x.net.AuthCommand;
+import ru.gr0946x.net.ChatCommand;
 import ru.gr0946x.bd.entity.User;
 import ru.gr0946x.bd.service.AuthService;
 import ru.gr0946x.bd.service.ChatService;
@@ -51,51 +52,54 @@ public class ConnectedClient {
             return;
         }
 
-        String command = parts[0].trim().toUpperCase();
+        String commandStr = parts[0].trim().toUpperCase();
         String nick = parts[1].trim();
         String password = parts[2];
 
         try {
-            if ("REG".equals(command)) {
-                authenticatedUser = authService.register(nick, password);
-                sendInfo("Регистрация успешна. Добро пожаловать, " + authenticatedUser.getNick() + "!");
-                notifyAllOnlineList();
-            } else if ("LOGIN".equals(command)) {
-                authenticatedUser = authService.login(nick, password);
-                sendInfo("Вход выполнен. Добро пожаловать, " + authenticatedUser.getNick() + "!");
-                notifyAllOnlineList();
-            } else {
-                sendError("Неизвестная команда. Используйте REG или LOGIN");
+            AuthCommand command = AuthCommand.valueOf(commandStr);
+            switch (command) {
+                case REG -> {
+                    authenticatedUser = authService.register(nick, password);
+                    sendInfo("Регистрация успешна. Добро пожаловать, " + authenticatedUser.getNick() + "!");
+                    notifyAllOnlineList();
+                }
+                case LOGIN -> {
+                    authenticatedUser = authService.login(nick, password);
+                    sendInfo("Вход выполнен. Добро пожаловать, " + authenticatedUser.getNick() + "!");
+                    notifyAllOnlineList();
+                }
             }
-        } catch (Exception e) {
-            sendError("Ошибка авторизации: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            sendError("Неизвестная команда. Используйте " + AuthCommand.REG.name() + " или " + AuthCommand.LOGIN.name());
         }
     }
 
     private void handleMessage(String data) {
         String[] parts = data.split(ProtocolConstants.COMMAND_SEPARATOR, 3);
-        String command = parts[0].trim().toUpperCase();
-
-        if ("LIST_USERS".equals(command)) {
-            notifyAllOnlineList();
-            return;
-        }
-
-        if (parts.length < 2) {
-            sendError("Формат: PM:Ник:Текст | BROADCAST:Текст | SEARCH:Ник:Запрос | HISTORY:Ник");
-            return;
-        }
-
+        String commandStr = parts[0].trim().toUpperCase();
         try {
-            switch (command) {
-                case "PM" -> handlePrivateMessage(parts);
-                case "BROADCAST" -> handleBroadcast(parts[1]);
-                case "HISTORY" -> handleHistory(parts[1]);
-                case "SEARCH" -> handleSearch(parts);
-                default -> sendError("Неизвестная команда: " + command);
+            ChatCommand command = ChatCommand.valueOf(commandStr);
+
+            if (command == ChatCommand.LIST_USERS) {
+                notifyAllOnlineList();
+                return;
             }
-        } catch (Exception e) {
-            sendError("Ошибка обработки: " + e.getMessage());
+
+            if (parts.length < 2) {
+                sendError("Формат: PM:Ник:Текст | BROADCAST:Текст | SEARCH:Ник:Запрос | HISTORY:Ник");
+                return;
+            }
+
+            switch (command) {
+                case PM -> handlePrivateMessage(parts);
+                case BROADCAST -> handleBroadcast(parts[1]);
+                case HISTORY -> handleHistory(parts[1]);
+                case SEARCH -> handleSearch(parts);
+                case LIST_USERS -> notifyAllOnlineList();
+            }
+        } catch (IllegalArgumentException e) {
+            sendError("Неизвестная команда: " + commandStr);
         }
     }
 

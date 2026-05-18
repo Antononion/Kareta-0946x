@@ -1,6 +1,6 @@
 package ru.gr0946x.ui;
 import ru.gr0946x.net.Client;
-
+import ru.gr0946x.net.ChatCommand;
 import ru.gr0946x.net.MessageType;
 import ru.gr0946x.net.ProtocolConstants;
 
@@ -31,7 +31,7 @@ public class GraphicalUi extends JFrame {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            client.sendData("LIST_USERS");
+            client.sendData(ChatCommand.LIST_USERS.name());
         });
     }
 
@@ -76,7 +76,7 @@ public class GraphicalUi extends JFrame {
 
                     chatArea.append("🔒 Переключено на чат с " + selected + "\n");
                     chatArea.append("⏳ Загрузка истории...\n");
-                    client.sendData("HISTORY:" + selected);
+                    client.sendData(ChatCommand.HISTORY.name() + ":" + selected);
 
                 } else {
                     usersList.clearSelection();
@@ -118,7 +118,7 @@ public class GraphicalUi extends JFrame {
 
         rightPanel.add(controlsPanel, BorderLayout.SOUTH);
 
-        statusLabel = new JLabel("Статус: Общий чат (BROADCAST)", SwingConstants.LEFT);
+        statusLabel = new JLabel("Общий чат", SwingConstants.LEFT);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
         rightPanel.add(statusLabel, BorderLayout.NORTH);
 
@@ -133,7 +133,8 @@ public class GraphicalUi extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                System.exit(0);
+                client.stop();
+                dispose();
             }
         });
     }
@@ -196,9 +197,9 @@ public class GraphicalUi extends JFrame {
         chatArea.setCaretPosition(chatArea.getDocument().getLength());
 
         if (currentChatTarget != null) {
-            client.sendData("PM:" + currentChatTarget + ":" + text);
+            client.sendData(ChatCommand.PM.name() + ":" + currentChatTarget + ":" + text);
         } else {
-            client.sendData("BROADCAST:" + text);
+            client.sendData(ChatCommand.BROADCAST.name() + ":" + text);
         }
         inputField.setText("");
     }
@@ -208,7 +209,7 @@ public class GraphicalUi extends JFrame {
         if (query.isEmpty()) return;
 
         if (currentChatTarget != null) {
-            client.sendData("SEARCH:" + currentChatTarget + ":" + query);
+            client.sendData(ChatCommand.SEARCH.name() + ":" + currentChatTarget + ":" + query);
         } else {
             chatArea.append("️ Выберите собеседника в списке слева для поиска.\n");
         }

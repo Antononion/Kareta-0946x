@@ -1,6 +1,7 @@
 package ru.gr0946x.ui;
 import ru.gr0946x.net.Client;
 import ru.gr0946x.net.MessageType;
+import ru.gr0946x.net.AuthCommand;
 
 import javax.swing.*;
 import java.awt.*;
@@ -55,19 +56,20 @@ public class AuthUi extends JFrame {
         add(buttonPanel, BorderLayout.SOUTH);
         add(statusLabel, BorderLayout.NORTH);
 
-        btnLogin.addActionListener(e -> attemptAuth("LOGIN"));
-        btnRegister.addActionListener(e -> attemptAuth("REG"));
-        passwordField.addActionListener(e -> attemptAuth("LOGIN"));
+        btnLogin.addActionListener(e -> attemptAuth(AuthCommand.LOGIN));
+        btnRegister.addActionListener(e -> attemptAuth(AuthCommand.REG));
+        passwordField.addActionListener(e -> attemptAuth(AuthCommand.LOGIN));
 
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                System.exit(0);
+                client.stop();
+                dispose();
             }
         });
     }
 
-    private void attemptAuth(String command) {
+    private void attemptAuth(AuthCommand command) {
         String nick = nickField.getText().trim();
         String password = new String(passwordField.getPassword());
 
@@ -75,14 +77,11 @@ public class AuthUi extends JFrame {
             statusLabel.setText("Заполните все поля!");
             return;
         }
-
         statusLabel.setText("Подключение...");
         statusLabel.setForeground(Color.BLUE);
-
         nickField.setEnabled(false);
         passwordField.setEnabled(false);
-
-        client.sendData(command + ":" + nick + ":" + password);
+        client.sendData(command.name() + ":" + nick + ":" + password);
     }
 
     private void setupNetworkListener() {

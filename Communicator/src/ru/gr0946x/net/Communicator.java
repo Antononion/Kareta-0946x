@@ -29,11 +29,12 @@ public class Communicator {
 
     public Communicator(Socket socket) throws IOException {
         this.socket = socket;
+        socket.setSoTimeout(1000);
         in = new BufferedReader(
-            new InputStreamReader(
-                socket.getInputStream(),
-                StandardCharsets.UTF_8
-            ));
+                new InputStreamReader(
+                        socket.getInputStream(),
+                        StandardCharsets.UTF_8
+                ));
         out = new PrintWriter(
                 socket.getOutputStream(),
                 true,
@@ -50,20 +51,20 @@ public class Communicator {
         new Thread(()-> {
             try {
                 while (isActive) {
-                    var data = in.readLine();
-                    if (data == null) break;
-                    for (var dataListener : dataListeners) {
-                        dataListener.accept(data);
+                    try {
+                        var data = in.readLine();
+                        if (data == null) break;
+                        for (var dataListener : dataListeners) {
+                            dataListener.accept(data);
+                        }
+                    } catch (java.net.SocketTimeoutException e) {
+                        // Таймаут — просто продолжаем цикл, проверяя isActive
+                        continue;
                     }
                 }
-            } catch (Exception e) {
-                if (e.getMessage() != null && e.getMessage().contains("Connection reset")) {
-                    return;
-                }
-                System.err.println("Ошибка чтения данных из сети");
-                System.err.println(e.getMessage());
-            }
-            finally {
+            } catch (IOException e) {
+                // Нормальное завершение при закрытии сокета
+            } finally {
                 stop();
                 if (onDisconnect != null) onDisconnect.run();
             }
@@ -76,15 +77,19 @@ public class Communicator {
     }
 
     public void stop(){
+        if (!isActive) return;
         isActive = false;
+
         try {
+            // 🔥 Сначала закрываем сокет — это прервёт блокирующий readLine()
+            if (socket != null && !socket.isClosed()) {
+                socket.close();  // Это вызовет IOException в потоке чтения
+            }
+            // Потом закрываем потоки (они уже могут быть закрыты)
             if (in != null) in.close();
             if (out != null) out.close();
-            if (socket != null && !socket.isClosed())
-                socket.close();
         } catch (IOException e) {
-            System.err.println("Ошибка при закрытии ресурсов");
-            System.err.println(e.getMessage());
+            // Ожидаемая ошибка при закрытии — игнорируем
         }
     }
 }
